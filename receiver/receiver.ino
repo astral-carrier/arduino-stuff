@@ -52,9 +52,24 @@ const uint32_t full[] = {
 bool second_setup_run = false;
 ArduinoLEDMatrix matrix;
 
+byte MIN_SPEED = 0;
+byte MAX_SPEED = 255;
+int16_t MIN_SETTING = -8;
+int16_t MAX_SETTING = 8;
+
+byte in1 = 11;
+byte in2 = 12;
+byte ena1 = 13;
+
+int16_t setting = 0;
+
 void setup() {
   Serial.begin(9600);
   while (!Serial);
+
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(ena1, OUTPUT);
 
   matrix.begin();
 }
@@ -91,24 +106,74 @@ void loop() {
 }
 
 void handle_signals() {
-  for (int index = 0; index < controller_service.characteristicCount(); index++) {
-    BLECharacteristic characteristic = controller_service.characteristic(index);
+  BLECharacteristic a_pressed = controller_service.characteristic(0);
+  BLECharacteristic b_pressed = controller_service.characteristic(1);
+  BLECharacteristic c_pressed = controller_service.characteristic(2);
+  BLECharacteristic d_pressed = controller_service.characteristic(3);
 
-    if (characteristic.valueUpdated()) {
-      int32_t read_raw;
+  handle_a(a_pressed);
+  handle_c(c_pressed);
+  handle_d(d_pressed);
+  handle_b(b_pressed);
+}
 
-      characteristic.readValue(read_raw);
+bool read_bool_char(BLECharacteristic characteristic) {
+  int32_t read_raw;
 
-      bool read_value = read_raw & 1;
+  characteristic.readValue(read_raw);
 
-      Serial.print("Characteristic ");
-      Serial.print(index);
-      Serial.print(" updated. New value: ");
-      Serial.println(read_value);
+  bool read_value = read_raw & 1;
 
-      matrix.loadFrame(read_value ? empty : full);
-    }
+  matrix.loadFrame(read_value ? empty : full);
+
+  return read_value;
+}
+
+void change_setting(int16_t attempted_value) {
+  setting = constrain(attempted_value, MIN_SETTING, MAX_SETTING);
+
+  Serial.print("Set setting to ");
+  Serial.println(setting);
+}
+
+void handle_a(BLECharacteristic pressed) {
+  if (pressed.valueUpdated() && !read_bool_char(pressed)) {
+    change_setting(setting - 1);
   }
+}
+
+void handle_c(BLECharacteristic pressed) {
+  if (pressed.valueUpdated() && !read_bool_char(pressed)) {
+    change_setting(setting + 1);
+  }
+}
+
+void handle_d(BLECharacteristic pressed) {
+  if (pressed.valueUpdated() && !read_bool_char(pressed)) {
+    change_setting(0);
+  }
+}
+
+void handle_b(BLECharacteristic pressed) {
+  if (pressed.valueUpdated()) {
+    set_motor(setting * !read_bool_char(pressed));
+  }
+}
+
+void set_motor(int16_t set_to) {
+  Serial.print("Seting motor to ");
+  Serial.println(set_to);
+
+  byte abs_setting = abs(set_to);
+
+  digitalWrite(in1, set_to > 0);
+  digitalWrite(in2, set_to < 0);
+
+  if (set_to == 0) {
+    return;
+  }
+
+  analogWrite(ena1, (abs_setting << 5) - 1);
 }
 
 void configure_scan() {
