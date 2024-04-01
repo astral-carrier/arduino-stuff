@@ -1,12 +1,24 @@
 #include <ArduinoBLE.h>
 #include <Arduino_LED_Matrix.h>
 
+int const UP_BTN = 2;
+int const DOWN_BTN = 4;
+int const LEFT_BTN = 5;
+int const RIGHT_BTN = 3;
+int const E_BTN = 6;
+int const F_BTN = 7;
+int const JOYSTICK_BTN = 8;
+int const JOYSTICK_AXIS_X = A0;
+int const JOYSTICK_AXIS_Y = A1;
+int buttons[] = {UP_BTN, DOWN_BTN, LEFT_BTN, RIGHT_BTN, E_BTN, F_BTN, JOYSTICK_BTN};
+
 BLEService controller_service("fff0");
 BLEBoolCharacteristic a_pressed("fff1", BLERead | BLENotify);
 BLEBoolCharacteristic b_pressed("fff2", BLERead | BLENotify);
 BLEBoolCharacteristic c_pressed("fff3", BLERead | BLENotify);
 BLEBoolCharacteristic d_pressed("fff4", BLERead | BLENotify);
 BLEBoolCharacteristic e_pressed("fff5", BLERead | BLENotify);
+BLEBoolCharacteristic f_pressed("fff6", BLERead | BLENotify);
 
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -26,6 +38,7 @@ void advertise() {
   controller_service.addCharacteristic(c_pressed);
   controller_service.addCharacteristic(d_pressed);
   controller_service.addCharacteristic(e_pressed);
+  controller_service.addCharacteristic(f_pressed);
 
   BLE.addService(controller_service);
 
@@ -55,6 +68,9 @@ void advertise() {
 }
 
 void setup() {
+  //Set all button pins as inputs with internal pullup resistors enabled.
+  for (int i; i < 7; i++)  pinMode(buttons[i], INPUT_PULLUP);
+
   matrix.begin();
   Serial.begin(9600);
   while (!Serial);
@@ -78,5 +94,50 @@ void loop() {
     second_setup_run = true;
   }
 
+  handle_controller_vals();
+
   BLE.poll();
+}
+
+void handle_controller_vals() {
+  /*
+  // Check each button input and print the status to the Serial Monitor Window
+  Serial.print("UP="),Serial.print(digitalRead(UP_BTN));
+  Serial.print("\tDOWN="),Serial.print(digitalRead(DOWN_BTN));
+  Serial.print("\tLEFT="),Serial.print(digitalRead(LEFT_BTN));
+  Serial.print("\tRIGHT="),Serial.print(digitalRead(RIGHT_BTN));
+  Serial.print("\tE="),Serial.print(digitalRead(E_BTN));
+  Serial.print("\tF="),Serial.print(digitalRead(F_BTN));
+  Serial.print("\tJOYSTICK BTN="),Serial.print(digitalRead(JOYSTICK_BTN));
+      
+  // Print the full X/Y joystick values (0-1023)
+  Serial.print("\tX="),Serial.print(analogRead(JOYSTICK_AXIS_X));
+  Serial.print("\tY="),Serial.println(analogRead(JOYSTICK_AXIS_Y)); 
+  */
+
+  write_and_notify(a_pressed, digitalRead(UP_BTN));
+  write_and_notify(b_pressed, digitalRead(RIGHT_BTN));
+  write_and_notify(c_pressed, digitalRead(DOWN_BTN));
+  write_and_notify(d_pressed, digitalRead(LEFT_BTN));
+  write_and_notify(e_pressed, digitalRead(E_BTN));
+  write_and_notify(f_pressed, digitalRead(F_BTN));
+
+  // delay(250);
+}
+
+void write_and_notify(BLEBoolCharacteristic characteristic, bool value) {
+  int32_t read_raw;
+
+  characteristic.readValue(read_raw);
+
+  bool read_value = read_raw & 1;
+
+  if (value != read_value) {
+    characteristic.writeValue(value);
+    
+    Serial.print("Wrote and notified characteristic ");
+    Serial.print(characteristic.uuid());
+    Serial.print(". New value: ");
+    Serial.println(value);
+  }
 }

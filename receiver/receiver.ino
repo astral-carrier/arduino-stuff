@@ -17,6 +17,12 @@
 #include <ArduinoBLE.h>
 #include <Arduino_LED_Matrix.h>
 
+const uint32_t empty[] = {
+  0,
+  0,
+  0
+};
+
 const uint32_t start[] = {
   0xffffff00,
   0,
@@ -68,7 +74,7 @@ void second_setup() {
   // Serial.println("Scan started");
 }
 
-BLEDevice controller;
+BLEService controller_service;
 
 void loop() {
   if (!second_setup_run) {
@@ -77,8 +83,31 @@ void loop() {
     second_setup_run = true;
   }
 
-  if (!controller) {
+  if (!controller_service) {
     attempt_connect();
+  } else {
+    handle_signals();
+  }
+}
+
+void handle_signals() {
+  for (int index = 0; index < controller_service.characteristicCount(); index++) {
+    BLECharacteristic characteristic = controller_service.characteristic(index);
+
+    if (characteristic.valueUpdated()) {
+      int32_t read_raw;
+
+      characteristic.readValue(read_raw);
+
+      bool read_value = read_raw & 1;
+
+      Serial.print("Characteristic ");
+      Serial.print(index);
+      Serial.print(" updated. New value: ");
+      Serial.println(read_value);
+
+      matrix.loadFrame(read_value ? empty : full);
+    }
   }
 }
 
@@ -94,7 +123,7 @@ void attempt_connect() {
 
   configure_scan();
 
-  controller = BLE.available();
+  BLEDevice controller = BLE.available();
 
   if (controller) {
     BLE.stopScan();
@@ -112,7 +141,34 @@ void attempt_connect() {
     matrix.loadFrame(final);
 
     explorerPeripheral(controller);
+
+    attempt_subscribe(controller);
   }
+}
+
+void attempt_subscribe(BLEDevice controller) {
+  controller_service = controller.service("fff0");
+
+  if (!controller_service) {
+    Serial.println("failed to find controller service");
+
+    return;
+  }
+
+  for (int index = 0; index < controller_service.characteristicCount(); index++) {
+    BLECharacteristic characteristic = controller_service.characteristic(index);
+
+    if (!characteristic.subscribe()) {
+      Serial.print("failed to subscribe to characteristic ");
+      Serial.println(index);
+
+      return;
+    }
+  }
+
+  Serial.println("Subscribed to all features");
+
+  matrix.loadFrame(full);
 }
 
 void explorerPeripheral(BLEDevice peripheral) {
@@ -159,10 +215,6 @@ void explorerPeripheral(BLEDevice peripheral) {
   peripheral.disconnect();
   Serial.println("Disconnected");
   */
-}
-
-void subscribe(BLEDevice controller) {
-
 }
 
 void exploreService(BLEService service) {
