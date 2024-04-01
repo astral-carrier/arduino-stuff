@@ -1,8 +1,11 @@
 #include <ArduinoBLE.h>
 #include <Arduino_LED_Matrix.h>
 
-BLEService myService("fff0");
-BLEIntCharacteristic myCharacteristic("fff1", BLERead | BLEBroadcast);
+BLEService controller_service("fff0");
+BLEBoolCharacteristic a_pressed("fff1", BLERead | BLENotify);
+BLEBoolCharacteristic b_pressed("fff2", BLERead | BLENotify);
+BLEBoolCharacteristic c_pressed("fff3", BLERead | BLENotify);
+BLEBoolCharacteristic d_pressed("fff4", BLERead | BLENotify);
 
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -26,8 +29,12 @@ void setup() {
     while (1);
   }
 
-  myService.addCharacteristic(myCharacteristic);
-  BLE.addService(myService);
+  controller_service.addCharacteristic(a_pressed);
+  controller_service.addCharacteristic(b_pressed);
+  controller_service.addCharacteristic(c_pressed);
+  controller_service.addCharacteristic(d_pressed);
+
+  BLE.addService(controller_service);
 
   // Build scan response data packet
   BLEAdvertisingData scanData;
@@ -36,6 +43,7 @@ void setup() {
   // Copy set parameters in the actual scan response packet
   BLE.setScanResponseData(scanData);
 
+  /*
   // Build advertising data packet
   BLEAdvertisingData advData;
   // Set parameters for advertising packet
@@ -44,6 +52,7 @@ void setup() {
   advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
   // Copy set parameters in the actual advertising packet
   BLE.setAdvertisingData(advData);
+  */
 
   BLE.advertise();
   Serial.println("advertising ...");
