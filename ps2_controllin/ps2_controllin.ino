@@ -1,11 +1,16 @@
 #include <PS2X_lib.h>  //for v1.6
 
-void setup() {
-  // put your setup code here, to run once:
+const int CLOCK = 10;
+const int COMMAND = 12;
+const int ATTENTION = 11; 
+const int DATA = 13;
+bool started = false;
 
+void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+}
 
+void start() {
 }
