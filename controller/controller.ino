@@ -6,6 +6,7 @@ BLEBoolCharacteristic a_pressed("fff1", BLERead | BLENotify);
 BLEBoolCharacteristic b_pressed("fff2", BLERead | BLENotify);
 BLEBoolCharacteristic c_pressed("fff3", BLERead | BLENotify);
 BLEBoolCharacteristic d_pressed("fff4", BLERead | BLENotify);
+BLEBoolCharacteristic e_pressed("fff5", BLERead | BLENotify);
 
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -19,20 +20,12 @@ const uint32_t full[] = {
 ArduinoLEDMatrix matrix;
 bool second_setup_run = false;
 
-void setup() {
-  matrix.begin();
-  Serial.begin(9600);
-  while (!Serial);
-
-  if (!BLE.begin()) {
-    Serial.println("failed to initialize BLE!");
-    while (1);
-  }
-
+void advertise() {
   controller_service.addCharacteristic(a_pressed);
   controller_service.addCharacteristic(b_pressed);
   controller_service.addCharacteristic(c_pressed);
   controller_service.addCharacteristic(d_pressed);
+  controller_service.addCharacteristic(e_pressed);
 
   BLE.addService(controller_service);
 
@@ -54,8 +47,24 @@ void setup() {
   BLE.setAdvertisingData(advData);
   */
 
+  c_pressed.writeValue(true);
+  d_pressed.writeValue(true);
+
   BLE.advertise();
   Serial.println("advertising ...");
+}
+
+void setup() {
+  matrix.begin();
+  Serial.begin(9600);
+  while (!Serial);
+
+  if (!BLE.begin()) {
+    Serial.println("failed to initialize BLE!");
+    while (1);
+  }
+
+  advertise();
 }
 
 void second_setup() {
