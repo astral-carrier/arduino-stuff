@@ -137,7 +137,7 @@ void handle_signals() {
   }
 
   BLECharacteristic a_pressed = controller_service.characteristic(0);
-  // BLECharacteristic b_pressed = controller_service.characteristic(1);
+  BLECharacteristic b_pressed = controller_service.characteristic(1);
   BLECharacteristic c_pressed = controller_service.characteristic(2);
   BLECharacteristic d_pressed = controller_service.characteristic(3);
   BLECharacteristic e_pressed = controller_service.characteristic(4);
@@ -159,7 +159,7 @@ void handle_signals() {
   handle_a(a_pressed);
   handle_c(c_pressed);
   handle_d(d_pressed);
-  // handle_b(b_pressed);
+  handle_b(b_pressed);
   handle_e(e_pressed);
   handle_joystick(joystick_x);
 }
@@ -212,17 +212,15 @@ void handle_c(BLECharacteristic pressed) {
 
 void handle_d(BLECharacteristic pressed) {
   if (pressed.valueUpdated() && !read_bool_char(pressed)) {
-    change_setting(0);
+    change_setting(MIN_SETTING);
   }
 }
 
-/*
 void handle_b(BLECharacteristic pressed) {
-  if (pressed.valueUpdated()) {
-    set_motor(setting * !read_bool_char(pressed));
+  if (pressed.valueUpdated() && !read_bool_char(pressed)) {
+    change_setting(MAX_SETTING);
   }
 }
-*/
 
 void handle_e(BLECharacteristic pressed) {
   if (pressed.valueUpdated() && !read_bool_char(pressed)) {
