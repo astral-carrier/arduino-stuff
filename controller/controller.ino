@@ -19,6 +19,7 @@ BLEBoolCharacteristic c_pressed("fff3", BLERead | BLENotify);
 BLEBoolCharacteristic d_pressed("fff4", BLERead | BLENotify);
 BLEBoolCharacteristic e_pressed("fff5", BLERead | BLENotify);
 BLEBoolCharacteristic f_pressed("fff6", BLERead | BLENotify);
+BLEUnsignedShortCharacteristic joystick_x("fff7", BLERead | BLENotify);
 
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -39,6 +40,7 @@ void advertise() {
   controller_service.addCharacteristic(d_pressed);
   controller_service.addCharacteristic(e_pressed);
   controller_service.addCharacteristic(f_pressed);
+  controller_service.addCharacteristic(joystick_x);
 
   BLE.addService(controller_service);
 
@@ -59,9 +61,6 @@ void advertise() {
   // Copy set parameters in the actual advertising packet
   BLE.setAdvertisingData(advData);
   */
-
-  c_pressed.writeValue(true);
-  d_pressed.writeValue(true);
 
   BLE.advertise();
   Serial.println("advertising ...");
@@ -115,17 +114,18 @@ void handle_controller_vals() {
   Serial.print("\tY="),Serial.println(analogRead(JOYSTICK_AXIS_Y)); 
   */
 
-  write_and_notify(a_pressed, digitalRead(UP_BTN));
-  write_and_notify(b_pressed, digitalRead(RIGHT_BTN));
-  write_and_notify(c_pressed, digitalRead(DOWN_BTN));
-  write_and_notify(d_pressed, digitalRead(LEFT_BTN));
-  write_and_notify(e_pressed, digitalRead(E_BTN));
-  write_and_notify(f_pressed, digitalRead(F_BTN));
+  write_and_notify_bool(a_pressed, digitalRead(UP_BTN));
+  write_and_notify_bool(b_pressed, digitalRead(RIGHT_BTN));
+  write_and_notify_bool(c_pressed, digitalRead(DOWN_BTN));
+  write_and_notify_bool(d_pressed, digitalRead(LEFT_BTN));
+  write_and_notify_bool(e_pressed, digitalRead(E_BTN));
+  write_and_notify_bool(f_pressed, digitalRead(F_BTN));
+  write_and_notify_short(joystick_x, analogRead(JOYSTICK_AXIS_X), 5);
 
   // delay(250);
 }
 
-void write_and_notify(BLEBoolCharacteristic characteristic, bool value) {
+void write_and_notify_bool(BLEBoolCharacteristic characteristic, bool value) {
   int32_t read_raw;
 
   characteristic.readValue(read_raw);
@@ -133,6 +133,23 @@ void write_and_notify(BLEBoolCharacteristic characteristic, bool value) {
   bool read_value = read_raw & 1;
 
   if (value != read_value) {
+    characteristic.writeValue(value);
+    
+    Serial.print("Wrote and notified characteristic ");
+    Serial.print(characteristic.uuid());
+    Serial.print(". New value: ");
+    Serial.println(value);
+  }
+}
+
+void write_and_notify_short(BLEUnsignedShortCharacteristic characteristic, uint16_t value, uint16_t threshold) {
+  int32_t read_raw;
+
+  characteristic.readValue(read_raw);
+
+  uint16_t read_value = read_raw;
+
+  if (abs(value - read_value) >= threshold) {
     characteristic.writeValue(value);
     
     Serial.print("Wrote and notified characteristic ");
