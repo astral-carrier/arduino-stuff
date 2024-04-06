@@ -61,7 +61,13 @@ byte in1 = 11;
 byte in2 = 12;
 byte ena1 = 13;
 
+byte grnLed = 2;
+byte redLed = 3;
+
+byte LASER = 10;
+
 int16_t setting = 0;
+bool laser_on = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -70,6 +76,11 @@ void setup() {
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
   pinMode(ena1, OUTPUT);
+
+  pinMode(redLed, OUTPUT);
+  pinMode(grnLed, OUTPUT);
+
+  pinMode(LASER, OUTPUT);
 
   matrix.begin();
 }
@@ -110,11 +121,13 @@ void handle_signals() {
   BLECharacteristic b_pressed = controller_service.characteristic(1);
   BLECharacteristic c_pressed = controller_service.characteristic(2);
   BLECharacteristic d_pressed = controller_service.characteristic(3);
+  BLECharacteristic e_pressed = controller_service.characteristic(4);
 
   handle_a(a_pressed);
   handle_c(c_pressed);
   handle_d(d_pressed);
   handle_b(b_pressed);
+  handle_e(e_pressed);
 }
 
 bool read_bool_char(BLECharacteristic characteristic) {
@@ -131,6 +144,13 @@ bool read_bool_char(BLECharacteristic characteristic) {
 
 void change_setting(int16_t attempted_value) {
   setting = constrain(attempted_value, MIN_SETTING, MAX_SETTING);
+  byte abs_setting = abs(setting);
+  
+  // green led on = forward
+  digitalWrite(grnLed, setting > 0 ? HIGH : LOW);
+  
+  // set flash rate of red led to absolute value of power
+  analogWrite(redLed, max((abs_setting << 5) - 1, 0));
 
   Serial.print("Set setting to ");
   Serial.println(setting);
@@ -157,6 +177,14 @@ void handle_d(BLECharacteristic pressed) {
 void handle_b(BLECharacteristic pressed) {
   if (pressed.valueUpdated()) {
     set_motor(setting * !read_bool_char(pressed));
+  }
+}
+
+void handle_e(BLECharacteristic pressed) {
+  if (pressed.valueUpdated() && !read_bool_char(pressed)) {
+    laser_on = !laser_on;
+
+    digitalWrite(LASER, laser_on ? HIGH : LOW);
   }
 }
 
