@@ -189,10 +189,10 @@ void change_setting(int16_t attempted_value) {
   byte abs_setting = abs(setting);
   
   // green led on = forward
-  digitalWrite(grnLed, setting > 0 ? HIGH : LOW);
+  // digitalWrite(grnLed, setting > 0 ? HIGH : LOW);
   
-  // set flash rate of red led to absolute value of power
-  analogWrite(redLed, max((abs_setting << 5) - 1, 0));
+  // set brightness of green led to absolute value of power
+  analogWrite(grnLed, max((abs_setting << 5) - 1, 0));
 
   Serial.print("Set setting to ");
   Serial.println(setting);
