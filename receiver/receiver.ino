@@ -54,7 +54,7 @@ ArduinoLEDMatrix matrix;
 
 byte MIN_SPEED = 0;
 byte MAX_SPEED = 255;
-int16_t MIN_SETTING = -8;
+int16_t MIN_SETTING = 1;
 int16_t MAX_SETTING = 8;
 
 byte in1 = 11;
@@ -66,7 +66,7 @@ byte redLed = 3;
 
 byte LASER = 10;
 
-int16_t setting = 0;
+int16_t setting = 1;
 bool laser_on = 0;
 
 byte EXPECTED_CHARACTERISTIC_COUNT = 7;
@@ -134,7 +134,7 @@ void handle_signals() {
   }
 
   BLECharacteristic a_pressed = controller_service.characteristic(0);
-  BLECharacteristic b_pressed = controller_service.characteristic(1);
+  // BLECharacteristic b_pressed = controller_service.characteristic(1);
   BLECharacteristic c_pressed = controller_service.characteristic(2);
   BLECharacteristic d_pressed = controller_service.characteristic(3);
   BLECharacteristic e_pressed = controller_service.characteristic(4);
@@ -143,7 +143,7 @@ void handle_signals() {
   handle_a(a_pressed);
   handle_c(c_pressed);
   handle_d(d_pressed);
-  handle_b(b_pressed);
+  // handle_b(b_pressed);
   handle_e(e_pressed);
   handle_joystick(joystick_x);
 }
@@ -200,11 +200,13 @@ void handle_d(BLECharacteristic pressed) {
   }
 }
 
+/*
 void handle_b(BLECharacteristic pressed) {
   if (pressed.valueUpdated()) {
     set_motor(setting * !read_bool_char(pressed));
   }
 }
+*/
 
 void handle_e(BLECharacteristic pressed) {
   if (pressed.valueUpdated() && !read_bool_char(pressed)) {
@@ -219,29 +221,25 @@ void handle_joystick(BLECharacteristic x_char) {
     uint16_t x = read_short_char(x_char);
 
     if (x < JOYSTICK_CENTER - JOYSTICK_DEADZONE) {
-      Serial.println("Setting motor to backward");
+      set_motor(setting, true, false);
     } else if (x > JOYSTICK_CENTER + JOYSTICK_DEADZONE) {
-      Serial.println("Setting motor to forward");
+      set_motor(setting, false, true);
     } else {
-      Serial.println("Setting motor to stop");
+      set_motor(setting, false, false);
     }
   }
 }
 
-void set_motor(int16_t set_to) {
+void set_motor(int16_t set_to, bool backward, bool forward) {
   Serial.print("Seting motor to ");
-  Serial.println(set_to);
+  Serial.print(set_to);
+  Serial.print(" ");
+  Serial.println(forward || backward ? (forward ? "forward" : "back") : "stop");
 
-  byte abs_setting = abs(set_to);
+  digitalWrite(in1, forward);
+  digitalWrite(in2, backward);
 
-  digitalWrite(in1, set_to > 0);
-  digitalWrite(in2, set_to < 0);
-
-  if (set_to == 0) {
-    return;
-  }
-
-  analogWrite(ena1, (abs_setting << 5) - 1);
+  analogWrite(ena1, (set_to << 5) - 1);
 }
 
 void configure_scan() {
