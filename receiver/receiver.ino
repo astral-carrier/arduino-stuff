@@ -69,6 +69,11 @@ byte LASER = 10;
 int16_t setting = 0;
 bool laser_on = 0;
 
+byte EXPECTED_CHARACTERISTIC_COUNT = 7;
+
+uint16_t JOYSTICK_CENTER = 500;
+uint16_t JOYSTICK_DEADZONE = 10;
+
 void setup() {
   Serial.begin(9600);
   while (!Serial);
@@ -100,7 +105,7 @@ void second_setup() {
   // Serial.println("Scan started");
 }
 
-BLEService controller_service;
+BLEService controller_service = BLEService();
 
 void loop() {
   if (!second_setup_run) {
@@ -117,17 +122,30 @@ void loop() {
 }
 
 void handle_signals() {
+  if (controller_service.characteristicCount() != EXPECTED_CHARACTERISTIC_COUNT) {
+    Serial.print("Polling expected ");
+    Serial.print(EXPECTED_CHARACTERISTIC_COUNT);
+    Serial.print(" characteristics but got ");
+    Serial.println(controller_service.characteristicCount());
+
+    controller_service = BLEService();
+
+    return;
+  }
+
   BLECharacteristic a_pressed = controller_service.characteristic(0);
   BLECharacteristic b_pressed = controller_service.characteristic(1);
   BLECharacteristic c_pressed = controller_service.characteristic(2);
   BLECharacteristic d_pressed = controller_service.characteristic(3);
   BLECharacteristic e_pressed = controller_service.characteristic(4);
+  BLECharacteristic joystick_x = controller_service.characteristic(6);
 
   handle_a(a_pressed);
   handle_c(c_pressed);
   handle_d(d_pressed);
   handle_b(b_pressed);
   handle_e(e_pressed);
+  handle_joystick(joystick_x);
 }
 
 bool read_bool_char(BLECharacteristic characteristic) {
@@ -140,6 +158,14 @@ bool read_bool_char(BLECharacteristic characteristic) {
   matrix.loadFrame(read_value ? empty : full);
 
   return read_value;
+}
+
+uint16_t read_short_char(BLECharacteristic characteristic) {
+  int32_t read_raw;
+
+  characteristic.readValue(read_raw);
+
+  return read_raw;
 }
 
 void change_setting(int16_t attempted_value) {
@@ -185,6 +211,20 @@ void handle_e(BLECharacteristic pressed) {
     laser_on = !laser_on;
 
     digitalWrite(LASER, laser_on ? HIGH : LOW);
+  }
+}
+
+void handle_joystick(BLECharacteristic x_char) {
+  if (x_char.valueUpdated()) {
+    uint16_t x = read_short_char(x_char);
+
+    if (x < JOYSTICK_CENTER - JOYSTICK_DEADZONE) {
+      Serial.println("Setting motor to backward");
+    } else if (x > JOYSTICK_CENTER + JOYSTICK_DEADZONE) {
+      Serial.println("Setting motor to forward");
+    } else {
+      Serial.println("Setting motor to stop");
+    }
   }
 }
 
@@ -240,16 +280,25 @@ void attempt_connect() {
 }
 
 void attempt_subscribe(BLEDevice controller) {
-  controller_service = controller.service("fff0");
+  BLEService service = controller.service("fff0");
 
-  if (!controller_service) {
+  if (!service) {
     Serial.println("failed to find controller service");
 
     return;
   }
 
-  for (int index = 0; index < controller_service.characteristicCount(); index++) {
-    BLECharacteristic characteristic = controller_service.characteristic(index);
+  if (service.characteristicCount() != EXPECTED_CHARACTERISTIC_COUNT) {
+    Serial.print("Connection expected ");
+    Serial.print(EXPECTED_CHARACTERISTIC_COUNT);
+    Serial.print(" characteristics but got ");
+    Serial.println(service.characteristicCount());
+
+    return;
+  }
+
+  for (int index = 0; index < service.characteristicCount(); index++) {
+    BLECharacteristic characteristic = service.characteristic(index);
 
     if (!characteristic.subscribe()) {
       Serial.print("failed to subscribe to characteristic ");
@@ -259,8 +308,9 @@ void attempt_subscribe(BLEDevice controller) {
     }
   }
 
-  Serial.println("Subscribed to all features");
+  controller_service = service;
 
+  Serial.println("Subscribed to all features");
   matrix.loadFrame(full);
 }
 
@@ -293,6 +343,7 @@ void explorerPeripheral(BLEDevice peripheral) {
   Serial.println(peripheral.appearance(), HEX);
   Serial.println();
 
+  /*
   // loop the services of the peripheral and explore each
   for (int i = 0; i < peripheral.serviceCount(); i++) {
     BLEService service = peripheral.service(i);
@@ -301,6 +352,7 @@ void explorerPeripheral(BLEDevice peripheral) {
   }
 
   Serial.println();
+  */
 
   /*
   // we are done exploring, disconnect
