@@ -20,6 +20,7 @@ BLEBoolCharacteristic d_pressed("fff4", BLERead | BLENotify);
 BLEBoolCharacteristic e_pressed("fff5", BLERead | BLENotify);
 BLEBoolCharacteristic f_pressed("fff6", BLERead | BLENotify);
 BLEUnsignedShortCharacteristic joystick_x("fff7", BLERead | BLENotify);
+BLEBoolCharacteristic heartbeat("fff8", BLENotify);
 
 // Advertising parameters should have a global scope. Do NOT define them in 'setup' or in 'loop'
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
@@ -41,13 +42,14 @@ void advertise() {
   controller_service.addCharacteristic(e_pressed);
   controller_service.addCharacteristic(f_pressed);
   controller_service.addCharacteristic(joystick_x);
+  controller_service.addCharacteristic(heartbeat);
 
   BLE.addService(controller_service);
 
   // Build scan response data packet
   BLEAdvertisingData scanData;
   // Set parameters for scan response packet
-  scanData.setLocalName("Arduino R4 Wifi Peripheral");
+  scanData.setLocalName("Rover Controller Arduino");
   // Copy set parameters in the actual scan response packet
   BLE.setScanResponseData(scanData);
 
@@ -121,6 +123,9 @@ void handle_controller_vals() {
   write_and_notify_bool(e_pressed, digitalRead(E_BTN));
   write_and_notify_bool(f_pressed, digitalRead(F_BTN));
   write_and_notify_short(joystick_x, analogRead(JOYSTICK_AXIS_X), 5);
+
+  // send heartbeat
+  heartbeat.writeValue(true);
 
   // delay(250);
 }

@@ -69,10 +69,13 @@ byte LASER = 10;
 int16_t setting = 1;
 bool laser_on = 0;
 
-byte EXPECTED_CHARACTERISTIC_COUNT = 7;
+byte EXPECTED_CHARACTERISTIC_COUNT = 8;
 
 uint16_t JOYSTICK_CENTER = 500;
 uint16_t JOYSTICK_DEADZONE = 10;
+
+unsigned long last_heartbeat = 0;
+unsigned long HEARTBEAT_TIMEOUT = 1000;
 
 void setup() {
   Serial.begin(9600);
@@ -139,6 +142,19 @@ void handle_signals() {
   BLECharacteristic d_pressed = controller_service.characteristic(3);
   BLECharacteristic e_pressed = controller_service.characteristic(4);
   BLECharacteristic joystick_x = controller_service.characteristic(6);
+  BLECharacteristic heartbeat = controller_service.characteristic(7);
+
+  if (heartbeat.valueUpdated()) {
+    last_heartbeat = millis();
+  } else if (millis() - last_heartbeat > HEARTBEAT_TIMEOUT) {
+    Serial.print("Heartbeat timed out after ");
+    Serial.print(HEARTBEAT_TIMEOUT);
+    Serial.println(" ms");
+
+    controller_service = BLEService();
+
+    return;
+  }
 
   handle_a(a_pressed);
   handle_c(c_pressed);
@@ -307,8 +323,9 @@ void attempt_subscribe(BLEDevice controller) {
   }
 
   controller_service = service;
+  last_heartbeat = millis();
 
-  Serial.println("Subscribed to all features");
+  Serial.println("Subscribed to all features, heartbeat initialized");
   matrix.loadFrame(full);
 }
 
