@@ -68,8 +68,8 @@ void second_setup() {
   Serial.println("Bluetooth® Low Energy Central - Peripheral Explorer");
 
   // start scanning for peripherals
-  BLE.scanForAddress("28:ea:0b:e6:62:da");
-  // BLE.scan();
+  // BLE.scanForAddress("28:ea:0b:e6:62:da");
+  BLE.scan();
 
   matrix.loadFrame(mid);
 

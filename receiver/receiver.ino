@@ -74,8 +74,44 @@ byte EXPECTED_CHARACTERISTIC_COUNT = 8;
 uint16_t JOYSTICK_CENTER = 500;
 uint16_t JOYSTICK_DEADZONE = 10;
 
-unsigned long last_heartbeat = 0;
-unsigned long HEARTBEAT_TIMEOUT = 1000;
+unsigned long last_controller_heartbeat = 0;
+unsigned long CONTROLLER_HEARTBEAT_TIMEOUT = 1000;
+
+BLEService indication_service("fff1");
+BLEUnsignedShortCharacteristic power("fff2", BLERead | BLENotify);
+BLEBoolCharacteristic receiver_heartbeat("fff3", BLENotify);
+
+void advertise() {
+  indication_service.addCharacteristic(power);
+  indication_service.addCharacteristic(receiver_heartbeat);
+
+  BLE.addService(indication_service);
+
+  // Build scan response data packet
+  BLEAdvertisingData scanData;
+  // Set parameters for scan response packet
+  scanData.setLocalName("Rover Receiver Arduino");
+  // Copy set parameters in the actual scan response packet
+  BLE.setScanResponseData(scanData);
+
+  /*
+  // Build advertising data packet
+  BLEAdvertisingData advData;
+  // Set parameters for advertising packet
+  advData.setManufacturerData(0x004C, manufactData, sizeof(manufactData));
+  advData.setAdvertisedService(myService);
+  advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
+  // Copy set parameters in the actual advertising packet
+  BLE.setAdvertisingData(advData);
+  */
+
+  Serial.print("Address is ");
+  Serial.println(BLE.address());
+
+  BLE.advertise();
+  
+  Serial.println("advertising ...");
+}
 
 void setup() {
   Serial.begin(9600);
@@ -90,12 +126,6 @@ void setup() {
 
   pinMode(LASER, OUTPUT);
 
-  matrix.begin();
-}
-
-void second_setup() {
-  matrix.loadFrame(start);
-
   // begin initialization
   if (!BLE.begin()) {
     Serial.println("starting Bluetooth® Low Energy module failed!");
@@ -104,6 +134,14 @@ void second_setup() {
       // Serial.println("uwu");
     };
   }
+
+  advertise();
+
+  matrix.begin();
+}
+
+void second_setup() {
+  matrix.loadFrame(start);
 
   // Serial.println("Scan started");
   change_setting(MIN_SETTING);
@@ -123,6 +161,8 @@ void loop() {
   } else {
     handle_signals();
   }
+
+  BLE.poll();
 }
 
 void handle_signals() {
@@ -143,13 +183,13 @@ void handle_signals() {
   BLECharacteristic d_pressed = controller_service.characteristic(3);
   BLECharacteristic e_pressed = controller_service.characteristic(4);
   BLECharacteristic joystick_x = controller_service.characteristic(6);
-  BLECharacteristic heartbeat = controller_service.characteristic(7);
+  BLECharacteristic controller_heartbeat = controller_service.characteristic(7);
 
-  if (heartbeat.valueUpdated()) {
-    last_heartbeat = millis();
-  } else if (millis() - last_heartbeat > HEARTBEAT_TIMEOUT) {
+  if (controller_heartbeat.valueUpdated()) {
+    last_controller_heartbeat = millis();
+  } else if (millis() - last_controller_heartbeat > CONTROLLER_HEARTBEAT_TIMEOUT) {
     Serial.print("Heartbeat timed out after ");
-    Serial.print(HEARTBEAT_TIMEOUT);
+    Serial.print(CONTROLLER_HEARTBEAT_TIMEOUT);
     Serial.println(" ms");
 
     controller_service = BLEService();
@@ -322,9 +362,9 @@ void attempt_subscribe(BLEDevice controller) {
   }
 
   controller_service = service;
-  last_heartbeat = millis();
+  last_controller_heartbeat = millis();
 
-  Serial.println("Subscribed to all features, heartbeat initialized");
+  Serial.println("Subscribed to all features, controller heartbeat initialized");
   matrix.loadFrame(full);
 }
 
