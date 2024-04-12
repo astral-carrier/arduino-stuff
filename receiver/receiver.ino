@@ -135,7 +135,7 @@ void setup() {
     };
   }
 
-  advertise();
+  // advertise();
 
   matrix.begin();
 }
@@ -162,7 +162,7 @@ void loop() {
     handle_signals();
   }
 
-  BLE.poll();
+  // BLE.poll();
 }
 
 void handle_signals() {
