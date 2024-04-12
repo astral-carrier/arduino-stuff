@@ -106,6 +106,7 @@ void second_setup() {
   }
 
   // Serial.println("Scan started");
+  change_setting(MIN_SETTING);
 }
 
 BLEService controller_service = BLEService();
@@ -171,7 +172,7 @@ bool read_bool_char(BLECharacteristic characteristic) {
 
   bool read_value = read_raw & 1;
 
-  matrix.loadFrame(read_value ? empty : full);
+  digitalWrite(redLed, read_value ? LOW : HIGH);
 
   return read_value;
 }
@@ -375,6 +376,7 @@ void explorerPeripheral(BLEDevice peripheral) {
   */
 }
 
+/*
 void exploreService(BLEService service) {
   // print the UUID of the service
   Serial.print("Service ");
@@ -387,6 +389,7 @@ void exploreService(BLEService service) {
     exploreCharacteristic(characteristic);
   }
 }
+
 
 void exploreCharacteristic(BLECharacteristic characteristic) {
   // print the UUID and properties of the characteristic
@@ -442,3 +445,4 @@ void printData(const unsigned char data[], int length) {
     Serial.print(b, HEX);
   }
 }
+*/
