@@ -276,9 +276,9 @@ void handle_joystick(BLECharacteristic x_char) {
     uint16_t x = read_short_char(x_char);
 
     if (x < JOYSTICK_CENTER - JOYSTICK_DEADZONE) {
-      set_motor(setting, true, false);
-    } else if (x > JOYSTICK_CENTER + JOYSTICK_DEADZONE) {
       set_motor(setting, false, true);
+    } else if (x > JOYSTICK_CENTER + JOYSTICK_DEADZONE) {
+      set_motor(setting, true, false);
     } else {
       set_motor(setting, false, false);
     }
@@ -308,6 +308,8 @@ void attempt_connect() {
   matrix.loadFrame(mid);
 
   configure_scan();
+
+  Serial.println("scanning");
 
   BLEDevice controller = BLE.available();
 

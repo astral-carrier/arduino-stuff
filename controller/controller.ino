@@ -64,6 +64,8 @@ void advertise() {
   BLE.setAdvertisingData(advData);
   */
 
+  Serial.println(BLE.address());
+
   BLE.advertise();
   Serial.println("advertising ...");
 }
